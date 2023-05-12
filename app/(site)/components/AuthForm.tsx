@@ -5,8 +5,10 @@ import Button from "@/app/components/Button";
 import Input from "@/app/components/inputs/Input";
 import { BsGithub, BsGoogle } from "react-icons/bs";
 import React, { useCallback, useState } from "react";
+import { signIn } from "next-auth/react";
 import { useForm, FieldValues, SubmitHandler } from "react-hook-form";
 import AuthSocialButton from "./AuthSocialButton";
+import toast from "react-hot-toast";
 
 type Variant = "LOGIN" | "REGISTER";
 
@@ -15,10 +17,10 @@ const AuthForm = () => {
   const [isLoading, setIsLoading] = useState(false);
 
   const toggleVariant = useCallback(() => {
-    if (variant === 'LOGIN') {
-      setVariant('REGISTER');
+    if (variant === "LOGIN") {
+      setVariant("REGISTER");
     } else {
-      setVariant('LOGIN');
+      setVariant("LOGIN");
     }
   }, [variant]);
 
@@ -38,18 +40,42 @@ const AuthForm = () => {
     setIsLoading(true);
 
     if (variant === "REGISTER") {
-      axios.post("/api/register", data)
+      axios
+        .post("/api/register", data)
+        .catch(() => toast.error("Something went wrong!"))
+        .finally(() => setIsLoading(false));
     }
 
     if (variant === "LOGIN") {
-      // NextAuth SignIn
+      signIn("credentials", {
+        ...data,
+        redirect: false,
+      })
+        .then((callback) => {
+          if (callback?.error) {
+            toast.error("Invalid credentials");
+          }
+          if (callback?.ok && !callback?.error) {
+            toast.success("Logged in!");
+          }
+        })
+        .finally(() => setIsLoading(false));
     }
   };
 
   const socialAction = (action: string) => {
     setIsLoading(true);
 
-    //NextAuth Social Signin
+    signIn(action, { redirect: false })
+      .then((callback) => {
+        if (callback?.error) {
+          toast.error("Invalid credentials");
+        }
+        if (callback?.ok && !callback?.error) {
+          toast.success("Logged in!");
+        }
+      })
+      .finally(() => setIsLoading(false));
   };
 
   return (
@@ -73,12 +99,12 @@ const AuthForm = () => {
       >
         <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
           {variant === "REGISTER" && (
-            <Input 
-              id="name" 
-              label="Name" 
-              register={register} 
+            <Input
+              id="name"
+              label="Name"
+              register={register}
               errors={errors}
-              disabled={isLoading} 
+              disabled={isLoading}
             />
           )}
           <Input
@@ -87,7 +113,7 @@ const AuthForm = () => {
             type="email"
             register={register}
             errors={errors}
-            disabled={isLoading} 
+            disabled={isLoading}
           />
           <Input
             id="password"
@@ -95,7 +121,7 @@ const AuthForm = () => {
             type="password"
             register={register}
             errors={errors}
-            disabled={isLoading} 
+            disabled={isLoading}
           />
           <div>
             <Button disabled={isLoading} fullWidth type="submit">
@@ -148,13 +174,8 @@ const AuthForm = () => {
               ? "New to Messenger?"
               : "Already have an account?"}
           </div>
-          <div
-            className="underline cursor-pointer"
-            onClick={toggleVariant}
-          >
-            {variant === "LOGIN"
-              ? "Create an account"
-              : "Login"}
+          <div className="underline cursor-pointer" onClick={toggleVariant}>
+            {variant === "LOGIN" ? "Create an account" : "Login"}
           </div>
         </div>
       </div>
